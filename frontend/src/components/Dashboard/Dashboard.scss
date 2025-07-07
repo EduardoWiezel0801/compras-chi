@@ -1,0 +1,116 @@
+.dashboard {
+  @apply pt-20 pb-6 px-4;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  min-height: 200px;
+
+  &__container {
+    @apply max-w-7xl mx-auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    
+    @media (max-width: 640px) {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+
+    @media (min-width: 1200px) {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+
+  &--loading {
+    .dashboard__card-skeleton {
+      @apply bg-white rounded-xl p-6 shadow-lg;
+      animation: pulse 1.5s ease-in-out infinite;
+
+      .skeleton {
+        @apply bg-gray-200 rounded;
+        animation: shimmer 2s infinite;
+
+        &--circle {
+          @apply w-12 h-12 rounded-full mb-4;
+        }
+
+        &--text {
+          @apply h-4 w-3/4 mb-2;
+        }
+
+        &--number {
+          @apply h-8 w-1/2;
+        }
+      }
+    }
+  }
+
+  &--error {
+    .dashboard__error {
+      @apply col-span-full flex flex-col items-center justify-center;
+      @apply text-gray-500 text-center py-12;
+
+      svg {
+        @apply mb-4 text-red-400;
+      }
+
+      h3 {
+        @apply text-xl font-semibold mb-2;
+      }
+
+      p {
+        @apply text-sm;
+      }
+    }
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: calc(200px + 100%) 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200px 100%;
+  animation: shimmer 2s infinite;
+}
+
+// Responsividade específica para diferentes tamanhos de tela
+@media (max-width: 480px) {
+  .dashboard {
+    @apply px-2 pt-16;
+
+    &__container {
+      gap: 0.75rem;
+    }
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .dashboard {
+    &__container {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+}
+
+@media (min-width: 1440px) {
+  .dashboard {
+    &__container {
+      gap: 2rem;
+    }
+  }
+}
+

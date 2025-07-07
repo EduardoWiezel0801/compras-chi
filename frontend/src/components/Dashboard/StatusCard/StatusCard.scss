@@ -1,0 +1,183 @@
+.status-card {
+  @apply relative bg-white rounded-xl shadow-lg overflow-hidden;
+  @apply transition-all duration-300 ease-in-out;
+  @apply hover:shadow-xl cursor-pointer;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+
+  &__header {
+    @apply flex items-start gap-4 p-6 pb-4;
+  }
+
+  &__icon {
+    @apply w-12 h-12 rounded-lg flex items-center justify-center;
+    @apply shadow-md transition-transform duration-300;
+
+    &--warning {
+      @apply bg-amber-100 text-amber-600;
+      box-shadow: 0 4px 15px rgba(245, 158, 11, 0.2);
+    }
+
+    &--danger {
+      @apply bg-red-100 text-red-600;
+      box-shadow: 0 4px 15px rgba(239, 68, 68, 0.2);
+    }
+
+    &--info {
+      @apply bg-blue-100 text-blue-600;
+      box-shadow: 0 4px 15px rgba(59, 130, 246, 0.2);
+    }
+
+    &--success {
+      @apply bg-green-100 text-green-600;
+      box-shadow: 0 4px 15px rgba(34, 197, 94, 0.2);
+    }
+  }
+
+  &__info {
+    @apply flex-1 min-w-0;
+  }
+
+  &__title {
+    @apply text-sm font-bold text-gray-800 mb-1;
+    @apply leading-tight;
+    
+    @media (max-width: 640px) {
+      @apply text-xs;
+    }
+  }
+
+  &__description {
+    @apply text-xs text-gray-500;
+    @apply leading-relaxed;
+  }
+
+  &__content {
+    @apply px-6 pb-6;
+  }
+
+  &__value {
+    @apply text-4xl font-bold text-gray-900;
+    @apply leading-none;
+    font-family: 'Inter', system-ui, sans-serif;
+    
+    @media (max-width: 640px) {
+      @apply text-3xl;
+    }
+  }
+
+  &__accent {
+    @apply absolute bottom-0 left-0 right-0 h-1;
+    
+    &--warning {
+      background: linear-gradient(90deg, #f59e0b, #fbbf24);
+    }
+
+    &--danger {
+      background: linear-gradient(90deg, #ef4444, #f87171);
+    }
+
+    &--info {
+      background: linear-gradient(90deg, #3b82f6, #60a5fa);
+    }
+
+    &--success {
+      background: linear-gradient(90deg, #22c55e, #4ade80);
+    }
+  }
+
+  // Estados de hover específicos por cor
+  &--warning:hover {
+    border-color: rgba(245, 158, 11, 0.2);
+    
+    .status-card__icon--warning {
+      transform: scale(1.1);
+      background: linear-gradient(135deg, #fbbf24, #f59e0b);
+      @apply text-white;
+    }
+  }
+
+  &--danger:hover {
+    border-color: rgba(239, 68, 68, 0.2);
+    
+    .status-card__icon--danger {
+      transform: scale(1.1);
+      background: linear-gradient(135deg, #f87171, #ef4444);
+      @apply text-white;
+    }
+  }
+
+  &--info:hover {
+    border-color: rgba(59, 130, 246, 0.2);
+    
+    .status-card__icon--info {
+      transform: scale(1.1);
+      background: linear-gradient(135deg, #60a5fa, #3b82f6);
+      @apply text-white;
+    }
+  }
+
+  &--success:hover {
+    border-color: rgba(34, 197, 94, 0.2);
+    
+    .status-card__icon--success {
+      transform: scale(1.1);
+      background: linear-gradient(135deg, #4ade80, #22c55e);
+      @apply text-white;
+    }
+  }
+}
+
+// Animações específicas para mobile
+@media (max-width: 640px) {
+  .status-card {
+    &__header {
+      @apply p-4 pb-2;
+      @apply gap-3;
+    }
+
+    &__icon {
+      @apply w-10 h-10;
+      
+      svg {
+        @apply w-5 h-5;
+      }
+    }
+
+    &__content {
+      @apply px-4 pb-4;
+    }
+  }
+}
+
+// Efeitos especiais para telas grandes
+@media (min-width: 1024px) {
+  .status-card {
+    &:hover {
+      transform: translateY(-8px);
+    }
+
+    &__value {
+      @apply text-5xl;
+    }
+  }
+}
+
+// Dark mode support (opcional)
+@media (prefers-color-scheme: dark) {
+  .status-card {
+    @apply bg-gray-800 border-gray-700;
+
+    &__title {
+      @apply text-gray-100;
+    }
+
+    &__description {
+      @apply text-gray-400;
+    }
+
+    &__value {
+      @apply text-gray-100;
+    }
+  }
+}
+

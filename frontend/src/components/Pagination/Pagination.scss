@@ -1,0 +1,271 @@
+.pagination {
+  @apply py-6 px-4;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+
+  &__container {
+    @apply max-w-7xl mx-auto;
+    @apply flex flex-col gap-4;
+
+    @media (min-width: 768px) {
+      @apply flex-row items-center justify-between;
+    }
+  }
+
+  &__info {
+    @apply flex flex-col gap-1 text-center;
+
+    @media (min-width: 768px) {
+      @apply text-left;
+    }
+  }
+
+  &__text {
+    @apply text-sm font-semibold text-gray-700;
+  }
+
+  &__total {
+    @apply text-xs text-gray-500;
+  }
+
+  &__controls {
+    @apply flex items-center justify-center gap-1;
+    @apply bg-white rounded-lg shadow-sm p-1;
+    @apply border border-gray-200;
+  }
+
+  &__button {
+    @apply flex items-center justify-center;
+    @apply w-10 h-10 rounded-md;
+    @apply text-sm font-medium;
+    @apply transition-all duration-200;
+    @apply border-0 outline-none;
+    @apply focus:ring-2 focus:ring-blue-500 focus:ring-offset-1;
+
+    &--nav {
+      @apply text-gray-600 hover:text-gray-800;
+      @apply hover:bg-gray-100;
+
+      &:disabled {
+        @apply text-gray-300 cursor-not-allowed;
+        @apply hover:bg-transparent hover:text-gray-300;
+      }
+    }
+
+    &--page {
+      @apply text-gray-700 hover:text-blue-600;
+      @apply hover:bg-blue-50;
+      @apply relative;
+
+      &::before {
+        content: '';
+        @apply absolute inset-0 rounded-md;
+        @apply bg-blue-500 opacity-0;
+        @apply transition-opacity duration-200;
+        @apply -z-10;
+      }
+
+      &:hover::before {
+        @apply opacity-10;
+      }
+    }
+
+    &--active {
+      @apply bg-blue-500 text-white;
+      @apply shadow-md;
+
+      &:hover {
+        @apply bg-blue-600 text-white;
+      }
+
+      &::before {
+        @apply opacity-100;
+      }
+    }
+
+    &--disabled {
+      @apply opacity-50 cursor-not-allowed;
+    }
+  }
+
+  &__pages {
+    @apply flex items-center gap-1;
+  }
+
+  &__dots {
+    @apply flex items-center justify-center;
+    @apply w-10 h-10 text-gray-400;
+    @apply text-sm font-medium;
+  }
+
+  &__jump {
+    @apply flex items-center gap-2;
+    @apply text-sm text-gray-600;
+
+    @media (max-width: 640px) {
+      @apply justify-center;
+    }
+  }
+
+  &__jump-label {
+    @apply font-medium;
+
+    @media (max-width: 480px) {
+      @apply hidden;
+    }
+  }
+
+  &__jump-input {
+    @apply w-16 px-2 py-1 rounded border border-gray-300;
+    @apply text-center text-sm font-medium;
+    @apply focus:ring-2 focus:ring-blue-500 focus:border-transparent;
+    @apply transition-all duration-200;
+
+    &::placeholder {
+      @apply text-gray-400;
+    }
+
+    /* Remove arrows from number input */
+    &::-webkit-outer-spin-button,
+    &::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+
+    &[type=number] {
+      -moz-appearance: textfield;
+    }
+  }
+}
+
+// Responsividade específica
+@media (max-width: 640px) {
+  .pagination {
+    @apply py-4 px-2;
+
+    &__container {
+      @apply gap-3;
+    }
+
+    &__controls {
+      @apply p-0.5;
+    }
+
+    &__button {
+      @apply w-8 h-8 text-xs;
+
+      &--nav svg {
+        @apply w-4 h-4;
+      }
+    }
+
+    &__pages {
+      @apply gap-0.5;
+    }
+
+    &__dots {
+      @apply w-8 h-8 text-xs;
+    }
+
+    &__jump {
+      @apply gap-1;
+    }
+
+    &__jump-input {
+      @apply w-12 text-xs;
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .pagination {
+    &__controls {
+      @apply flex-wrap;
+    }
+
+    &__pages {
+      @apply order-last w-full justify-center;
+      @apply mt-2 pt-2 border-t border-gray-200;
+    }
+  }
+}
+
+// Estados especiais
+.pagination__button--loading {
+  @apply opacity-50 cursor-wait;
+  
+  &::after {
+    content: '';
+    @apply absolute inset-0 rounded-md;
+    @apply bg-current opacity-20;
+    animation: pulse 1.5s infinite;
+  }
+}
+
+// Animações
+@keyframes pulse {
+  0%, 100% {
+    opacity: 0.2;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+// Dark mode support
+@media (prefers-color-scheme: dark) {
+  .pagination {
+    &__text {
+      @apply text-gray-300;
+    }
+
+    &__total {
+      @apply text-gray-400;
+    }
+
+    &__controls {
+      @apply bg-gray-800 border-gray-700;
+    }
+
+    &__button {
+      &--nav {
+        @apply text-gray-400 hover:text-gray-200;
+        @apply hover:bg-gray-700;
+
+        &:disabled {
+          @apply text-gray-600 hover:bg-transparent hover:text-gray-600;
+        }
+      }
+
+      &--page {
+        @apply text-gray-300 hover:text-blue-400;
+        @apply hover:bg-blue-900/30;
+      }
+
+      &--active {
+        @apply bg-blue-600 text-white;
+
+        &:hover {
+          @apply bg-blue-500;
+        }
+      }
+    }
+
+    &__dots {
+      @apply text-gray-500;
+    }
+
+    &__jump {
+      @apply text-gray-400;
+    }
+
+    &__jump-input {
+      @apply bg-gray-800 border-gray-600 text-gray-200;
+      @apply focus:ring-blue-400 focus:border-transparent;
+
+      &::placeholder {
+        @apply text-gray-500;
+      }
+    }
+  }
+}
+
