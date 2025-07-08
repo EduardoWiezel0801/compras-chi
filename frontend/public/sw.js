@@ -1,21 +1,19 @@
 // Service Worker para funcionalidade offline
-const CACHE_NAME = 'chiaperini-pedidos-v1';
-const API_CACHE_NAME = 'chiaperini-api-v1';
+const CACHE_NAME = `chiaperini-cache-${new Date().getTime()}`;
+const API_CACHE_NAME = 'chiaperini-api-cache';
 
-// Recursos para cache estático
-const STATIC_RESOURCES = [
+// URLs para cache estático
+const urlsToCache = [
   '/',
-  '/static/js/bundle.js',
-  '/static/css/main.css',
+  '/index.html',
   '/manifest.json'
 ];
 
-// URLs da API para cache
-const API_URLS = [
+// URLs da API que devem ser cacheadas
+const apiUrlsToCache = [
   '/api/stats/',
   '/api/orders/',
   '/api/suppliers/',
-  '/api/deliveries/',
   '/api/health/'
 ];
 
@@ -25,21 +23,31 @@ self.addEventListener('install', (event) => {
   
   event.waitUntil(
     Promise.all([
-      // Cache de recursos estáticos
+      // Cache estático
       caches.open(CACHE_NAME).then((cache) => {
-        console.log('Service Worker: Cache de recursos estáticos criado');
-        return cache.addAll(STATIC_RESOURCES);
+        console.log('Service Worker: Cache estático criado');
+        return cache.addAll(urlsToCache);
       }),
       // Cache da API
       caches.open(API_CACHE_NAME).then((cache) => {
         console.log('Service Worker: Cache da API criado');
-        return cache;
+        return Promise.allSettled(
+          apiUrlsToCache.map(url => 
+            fetch(url).then(response => {
+              if (response.ok) {
+                return cache.put(url, response.clone());
+              }
+            }).catch(err => {
+              console.log(`Não foi possível cachear ${url}:`, err);
+            })
+          )
+        );
       })
-    ])
+    ]).then(() => {
+      console.log('Service Worker: Instalação concluída');
+      return self.skipWaiting();
+    })
   );
-  
-  // Força a ativação imediata
-  self.skipWaiting();
 });
 
 // Ativar Service Worker
@@ -47,234 +55,131 @@ self.addEventListener('activate', (event) => {
   console.log('Service Worker: Ativando...');
   
   event.waitUntil(
+    // Limpar caches antigos
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
-          // Remove caches antigos
           if (cacheName !== CACHE_NAME && cacheName !== API_CACHE_NAME) {
             console.log('Service Worker: Removendo cache antigo:', cacheName);
             return caches.delete(cacheName);
           }
         })
       );
+    }).then(() => {
+      console.log('Service Worker: Ativado e assumindo controle');
+      return self.clients.claim();
     })
   );
-  
-  // Assume controle imediato
-  self.clients.claim();
 });
 
 // Interceptar requisições
 self.addEventListener('fetch', (event) => {
-  const { request } = event;
-  const url = new URL(request.url);
+  const requestUrl = new URL(event.request.url);
   
-  // Estratégia para recursos estáticos
-  if (request.destination === 'document' || 
-      request.destination === 'script' || 
-      request.destination === 'style') {
-    event.respondWith(cacheFirstStrategy(request, CACHE_NAME));
+  // Estratégia para API: Network First, Cache Fallback
+  if (requestUrl.pathname.startsWith('/api/')) {
+    event.respondWith(
+      networkFirstStrategy(event.request)
+    );
     return;
   }
   
-  // Estratégia para API
-  if (url.pathname.startsWith('/api/')) {
-    event.respondWith(networkFirstStrategy(request, API_CACHE_NAME));
-    return;
-  }
-  
-  // Para outros recursos, tentar rede primeiro
+  // Estratégia para recursos estáticos: Cache First
   event.respondWith(
-    fetch(request).catch(() => {
-      return caches.match(request);
-    })
+    cacheFirstStrategy(event.request)
   );
 });
 
-// Estratégia Cache First (para recursos estáticos)
-async function cacheFirstStrategy(request, cacheName) {
+// Estratégia Network First (para API)
+async function networkFirstStrategy(request) {
   try {
-    // Tentar buscar no cache primeiro
+    // Tentar buscar da rede primeiro
+    const networkResponse = await fetch(request);
+    
+    if (networkResponse.ok) {
+      // Se sucesso, atualizar cache
+      const cache = await caches.open(API_CACHE_NAME);
+      cache.put(request, networkResponse.clone());
+      return networkResponse;
+    }
+    
+    throw new Error('Network response not ok');
+  } catch (error) {
+    console.log('Network failed, trying cache:', error);
+    
+    // Se falhou, tentar cache
     const cachedResponse = await caches.match(request);
+    
     if (cachedResponse) {
       return cachedResponse;
     }
     
-    // Se não estiver no cache, buscar na rede
-    const networkResponse = await fetch(request);
-    
-    // Adicionar ao cache se a resposta for válida
-    if (networkResponse.status === 200) {
-      const cache = await caches.open(cacheName);
-      cache.put(request, networkResponse.clone());
-    }
-    
-    return networkResponse;
-  } catch (error) {
-    console.error('Erro na estratégia Cache First:', error);
-    
-    // Fallback para página offline se disponível
-    if (request.destination === 'document') {
-      return caches.match('/offline.html') || new Response('Offline', { status: 503 });
-    }
-    
-    return new Response('Recurso não disponível offline', { status: 503 });
-  }
-}
-
-// Estratégia Network First (para API)
-async function networkFirstStrategy(request, cacheName) {
-  try {
-    // Tentar buscar na rede primeiro
-    const networkResponse = await fetch(request);
-    
-    // Se a resposta for válida, atualizar o cache
-    if (networkResponse.status === 200) {
-      const cache = await caches.open(cacheName);
-      cache.put(request, networkResponse.clone());
-    }
-    
-    return networkResponse;
-  } catch (error) {
-    console.log('Rede indisponível, buscando no cache:', request.url);
-    
-    // Se a rede falhar, buscar no cache
-    const cachedResponse = await caches.match(request);
-    if (cachedResponse) {
-      // Adicionar header para indicar que é cache
-      const response = cachedResponse.clone();
-      response.headers.set('X-From-Cache', 'true');
-      return response;
-    }
-    
-    // Se não houver cache, retornar erro
+    // Se não tem cache, retornar resposta de erro
     return new Response(
-      JSON.stringify({ 
-        error: 'Dados não disponíveis offline',
-        offline: true 
-      }), 
-      { 
+      JSON.stringify({
+        error: 'Sem conexão e dados não disponíveis offline',
+        offline: true
+      }),
+      {
         status: 503,
+        statusText: 'Service Unavailable',
         headers: { 'Content-Type': 'application/json' }
       }
     );
   }
 }
 
-// Sincronização em background (quando a rede voltar)
-self.addEventListener('sync', (event) => {
-  console.log('Service Worker: Sincronização em background');
+// Estratégia Cache First (para recursos estáticos)
+async function cacheFirstStrategy(request) {
+  // Tentar cache primeiro
+  const cachedResponse = await caches.match(request);
   
-  if (event.tag === 'background-sync') {
-    event.waitUntil(syncData());
+  if (cachedResponse) {
+    return cachedResponse;
   }
-});
-
-// Função para sincronizar dados
-async function syncData() {
+  
+  // Se não tem cache, buscar da rede
   try {
-    console.log('Service Worker: Sincronizando dados...');
+    const networkResponse = await fetch(request);
     
-    // Atualizar cache da API com dados mais recentes
-    const cache = await caches.open(API_CACHE_NAME);
+    if (networkResponse.ok) {
+      // Cachear para próximas vezes
+      const cache = await caches.open(CACHE_NAME);
+      cache.put(request, networkResponse.clone());
+    }
     
-    for (const url of API_URLS) {
-      try {
-        const response = await fetch(url);
-        if (response.status === 200) {
-          await cache.put(url, response.clone());
-          console.log('Service Worker: Cache atualizado para:', url);
-        }
-      } catch (error) {
-        console.log('Service Worker: Erro ao sincronizar:', url, error);
+    return networkResponse;
+  } catch (error) {
+    console.log('Failed to fetch:', error);
+    
+    // Retornar página offline se disponível
+    if (request.mode === 'navigate') {
+      const offlinePage = await caches.match('/');
+      if (offlinePage) {
+        return offlinePage;
       }
     }
     
-    // Notificar clientes sobre a sincronização
-    const clients = await self.clients.matchAll();
-    clients.forEach(client => {
-      client.postMessage({
-        type: 'SYNC_COMPLETE',
-        timestamp: Date.now()
-      });
+    return new Response('Recurso não disponível offline', {
+      status: 503,
+      statusText: 'Service Unavailable'
     });
-    
-  } catch (error) {
-    console.error('Service Worker: Erro na sincronização:', error);
   }
 }
 
-// Lidar com mensagens dos clientes
+// Listener para mensagens do cliente
 self.addEventListener('message', (event) => {
-  const { type, data } = event.data;
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
   
-  switch (type) {
-    case 'SKIP_WAITING':
-      self.skipWaiting();
-      break;
-      
-    case 'GET_CACHE_STATUS':
-      getCacheStatus().then(status => {
-        event.ports[0].postMessage(status);
-      });
-      break;
-      
-    case 'CLEAR_CACHE':
-      clearAllCaches().then(() => {
-        event.ports[0].postMessage({ success: true });
-      });
-      break;
-      
-    case 'FORCE_SYNC':
-      syncData().then(() => {
-        event.ports[0].postMessage({ success: true });
-      });
-      break;
+  if (event.data && event.data.type === 'CLEAR_CACHE') {
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cacheName) => caches.delete(cacheName))
+      );
+    }).then(() => {
+      event.ports[0].postMessage({ success: true });
+    });
   }
 });
-
-// Obter status do cache
-async function getCacheStatus() {
-  try {
-    const cacheNames = await caches.keys();
-    const status = {};
-    
-    for (const cacheName of cacheNames) {
-      const cache = await caches.open(cacheName);
-      const keys = await cache.keys();
-      status[cacheName] = {
-        count: keys.length,
-        urls: keys.map(req => req.url)
-      };
-    }
-    
-    return status;
-  } catch (error) {
-    console.error('Erro ao obter status do cache:', error);
-    return {};
-  }
-}
-
-// Limpar todos os caches
-async function clearAllCaches() {
-  try {
-    const cacheNames = await caches.keys();
-    await Promise.all(
-      cacheNames.map(cacheName => caches.delete(cacheName))
-    );
-    console.log('Service Worker: Todos os caches foram limpos');
-  } catch (error) {
-    console.error('Erro ao limpar caches:', error);
-  }
-}
-
-// Monitorar mudanças de conectividade
-self.addEventListener('online', () => {
-  console.log('Service Worker: Conexão restaurada');
-  syncData();
-});
-
-self.addEventListener('offline', () => {
-  console.log('Service Worker: Conexão perdida');
-});
-

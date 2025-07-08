@@ -1,167 +1,135 @@
-#!/usr/bin/env python
-"""
-Script para popular o banco de dados com dados de exemplo
-"""
+# populate_data.py
 import os
 import sys
 import django
-from datetime import date, timedelta, time
-from random import randint, choice
+from datetime import date, timedelta
+import random
 
 # Configurar Django
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
 django.setup()
 
 from orders.models import Supplier, PurchaseOrder, DeliveryReceipt
 
+def clear_data():
+    """Limpa todos os dados existentes"""
+    print("🗑️  Limpando dados existentes...")
+    DeliveryReceipt.objects.all().delete()
+    PurchaseOrder.objects.all().delete()
+    Supplier.objects.all().delete()
+    print("✅ Dados limpos!")
+
 def create_suppliers():
     """Cria fornecedores de exemplo"""
+    print("👥 Criando fornecedores...")
+    
     suppliers_data = [
-        {'code': 'FOR001', 'name': 'FORNECEDOR ALPHA LTDA'},
-        {'code': 'FOR002', 'name': 'BETA COMERCIAL E INDUSTRIAL'},
-        {'code': 'FOR003', 'name': 'GAMMA DISTRIBUIDORA S.A.'},
-        {'code': 'FOR004', 'name': 'DELTA MATERIAIS ELETRICOS'},
-        {'code': 'FOR005', 'name': 'EPSILON COMPONENTES ELETRONICOS'},
-        {'code': 'FOR006', 'name': 'ZETA FERRAMENTAS E EQUIPAMENTOS'},
-        {'code': 'FOR007', 'name': 'ETA SUPRIMENTOS INDUSTRIAIS'},
-        {'code': 'FOR008', 'name': 'THETA PECAS E ACESSORIOS'},
-        {'code': 'FOR009', 'name': 'IOTA MATERIAIS DE CONSTRUCAO'},
-        {'code': 'FOR010', 'name': 'KAPPA PRODUTOS QUIMICOS LTDA'},
+        ('FOR001', 'ALPHA MATERIAIS LTDA'),
+        ('FOR002', 'BETA COMERCIAL S.A.'),
+        ('FOR003', 'GAMMA DISTRIBUIDORA'),
+        ('FOR004', 'DELTA SUPRIMENTOS'),
+        ('FOR005', 'EPSILON INDUSTRIAL'),
     ]
     
     suppliers = []
-    for data in suppliers_data:
-        supplier, created = Supplier.objects.get_or_create(
-            code=data['code'],
-            defaults={'name': data['name']}
+    for code, name in suppliers_data:
+        supplier = Supplier.objects.create(
+            code=code,
+            name=name,
+            status='ATIVO'
         )
         suppliers.append(supplier)
-        if created:
-            print(f"Fornecedor criado: {supplier}")
+        print(f"  ✓ {code} - {name}")
     
     return suppliers
 
 def create_purchase_orders(suppliers):
     """Cria pedidos de compra de exemplo"""
+    print("📋 Criando pedidos de compra...")
+    
     today = date.today()
-    statuses = ['PENDENTE', 'PARCIAL']
-    warehouses = ['01', '02', '03', '04', '05']
-    
-    orders_data = []
-    
-    # Pedidos para hoje (5 pedidos)
-    for i in range(1, 6):
-        orders_data.append({
-            'number': f'PC{2024}{str(i).zfill(4)}',
-            'issue_date': today - timedelta(days=randint(1, 30)),
-            'supplier': choice(suppliers),
-            'followup_date': today,
-            'warehouse': choice(warehouses),
-            'items_count': randint(1, 20),
-            'status': choice(statuses)
-        })
-    
-    # Pedidos atrasados (8 pedidos)
-    for i in range(6, 14):
-        orders_data.append({
-            'number': f'PC{2024}{str(i).zfill(4)}',
-            'issue_date': today - timedelta(days=randint(5, 45)),
-            'supplier': choice(suppliers),
-            'followup_date': today - timedelta(days=randint(1, 10)),
-            'warehouse': choice(warehouses),
-            'items_count': randint(1, 25),
-            'status': choice(statuses)
-        })
-    
-    # Pedidos para amanhã (3 pedidos)
-    for i in range(14, 17):
-        orders_data.append({
-            'number': f'PC{2024}{str(i).zfill(4)}',
-            'issue_date': today - timedelta(days=randint(1, 20)),
-            'supplier': choice(suppliers),
-            'followup_date': today + timedelta(days=1),
-            'warehouse': choice(warehouses),
-            'items_count': randint(1, 15),
-            'status': choice(statuses)
-        })
-    
-    # Pedidos futuros (10 pedidos)
-    for i in range(17, 27):
-        orders_data.append({
-            'number': f'PC{2024}{str(i).zfill(4)}',
-            'issue_date': today - timedelta(days=randint(1, 15)),
-            'supplier': choice(suppliers),
-            'followup_date': today + timedelta(days=randint(2, 15)),
-            'warehouse': choice(warehouses),
-            'items_count': randint(1, 30),
-            'status': choice(statuses)
-        })
-    
     orders = []
-    for data in orders_data:
-        order, created = PurchaseOrder.objects.get_or_create(
-            number=data['number'],
-            defaults=data
-        )
-        orders.append(order)
-        if created:
-            print(f"Pedido criado: {order}")
+    
+    # Diferentes cenários de datas
+    scenarios = [
+        # (data_followup, quantidade, status_opcoes)
+        (today, 3, ['PENDENTE', 'PARCIAL']),  # Para hoje
+        (today - timedelta(days=1), 2, ['PENDENTE']),  # Atrasados
+        (today + timedelta(days=1), 2, ['PENDENTE']),  # Para amanhã
+        (today + timedelta(days=2), 3, ['PENDENTE']),  # Futuros
+    ]
+    
+    pc_number = 1
+    
+    for followup_date, count, status_options in scenarios:
+        for i in range(count):
+            # Data de emissão entre 1-30 dias atrás
+            issue_date = today - timedelta(days=random.randint(1, 30))
+            
+            order = PurchaseOrder.objects.create(
+                numero_pc=f'PC2024{pc_number:03d}',
+                data_emissao=issue_date,
+                fornecedor=random.choice(suppliers),
+                quantidade_itens=random.randint(5, 50),
+                followup_date=followup_date,
+                armazenamento=f'{random.randint(1, 3):02d}',
+                status=random.choice(status_options)
+            )
+            orders.append(order)
+            
+            print(f"  ✓ {order.numero_pc} - {order.fornecedor.code} - {order.status}")
+            pc_number += 1
     
     return orders
 
 def create_delivery_receipts(suppliers):
     """Cria recebimentos de exemplo"""
+    print("📦 Criando recebimentos...")
+    
     today = date.today()
-    statuses = ['PENDENTE', 'FINALIZADO']
     
-    receipts_data = []
-    
-    # Recebimentos de hoje
-    for i in range(1, 8):
-        status = choice(statuses)
-        receipts_data.append({
-            'cargo_number': f'CG{2024}{str(i).zfill(4)}',
-            'manifest_date': today,
-            'supplier': choice(suppliers),
-            'invoice_number': f'NF{randint(10000, 99999)}',
-            'issue_date': today - timedelta(days=randint(0, 3)),
-            'manifest_time': time(randint(8, 17), randint(0, 59)),
-            'entry_time': time(randint(8, 17), randint(0, 59)),
-            'exit_time': time(randint(8, 17), randint(0, 59)) if status == 'FINALIZADO' else None,
-            'status': status
-        })
-    
-    receipts = []
-    for data in receipts_data:
-        receipt, created = DeliveryReceipt.objects.get_or_create(
-            cargo_number=data['cargo_number'],
-            defaults=data
+    # Criar alguns recebimentos
+    for i in range(2):
+        supplier = random.choice(suppliers)
+        
+        receipt = DeliveryReceipt.objects.create(
+            cargo_number=f'CG{today.strftime("%Y%m%d")}{i+1:03d}',
+            manifest_date=today,
+            supplier=supplier,
+            invoice_number=f'NF{random.randint(100000, 999999)}',
+            issue_date=today,
+            status='FINALIZADO'
         )
-        receipts.append(receipt)
-        if created:
-            print(f"Recebimento criado: {receipt}")
-    
-    return receipts
+        
+        print(f"  ✓ {receipt.cargo_number} - {supplier.code} - {receipt.status}")
 
 def main():
     """Função principal"""
-    print("Populando banco de dados com dados de exemplo...")
+    print("🚀 Iniciando população do banco de dados...")
+    print("=" * 50)
     
-    # Limpar dados existentes (opcional)
-    # PurchaseOrder.objects.all().delete()
-    # DeliveryReceipt.objects.all().delete()
-    # Supplier.objects.all().delete()
-    
-    # Criar dados
-    suppliers = create_suppliers()
-    orders = create_purchase_orders(suppliers)
-    receipts = create_delivery_receipts(suppliers)
-    
-    print(f"\nDados criados com sucesso!")
-    print(f"Fornecedores: {len(suppliers)}")
-    print(f"Pedidos de Compra: {len(orders)}")
-    print(f"Recebimentos: {len(receipts)}")
+    try:
+        # Limpar dados existentes
+        clear_data()
+        
+        # Criar dados
+        suppliers = create_suppliers()
+        orders = create_purchase_orders(suppliers)
+        create_delivery_receipts(suppliers)
+        
+        print("=" * 50)
+        print("✅ População concluída com sucesso!")
+        print(f"📊 Criados:")
+        print(f"   • {Supplier.objects.count()} fornecedores")
+        print(f"   • {PurchaseOrder.objects.count()} pedidos de compra")
+        print(f"   • {DeliveryReceipt.objects.count()} recebimentos")
+        print("=" * 50)
+        
+    except Exception as e:
+        print(f"❌ Erro: {e}")
+        import traceback
+        traceback.print_exc()
 
 if __name__ == '__main__':
     main()
-

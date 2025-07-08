@@ -1,9 +1,7 @@
 import React from 'react';
-import { motion } from 'framer-motion';
-import { AlertTriangle, Clock, CheckCircle } from 'lucide-react';
 import './OrderRow.scss';
 
-const OrderRow = ({ order, index }) => {
+const OrderRow = ({ order }) => {
   // Função para formatar data
   const formatDate = (dateString) => {
     if (!dateString) return '-';
@@ -11,101 +9,83 @@ const OrderRow = ({ order, index }) => {
     return date.toLocaleDateString('pt-BR');
   };
 
-  // Função para truncar texto longo
-  const truncateText = (text, maxLength = 35) => {
-    if (!text) return '-';
-    return text.length > maxLength ? text.substring(0, maxLength - 3) + '...' : text;
-  };
-
   // Função para determinar classe do status
-  const getStatusClass = (order) => {
-    if (order.is_delayed) return 'delayed';
-    if (order.is_today) return 'today';
-    if (order.is_tomorrow) return 'tomorrow';
-    return 'normal';
+  const getStatusClass = (status) => {
+    const statusMap = {
+      'PENDENTE': 'status--pending',
+      'PARCIAL': 'status--partial', 
+      'FINALIZADO': 'status--completed',
+      'CANCELADO': 'status--cancelled'
+    };
+    return statusMap[status] || 'status--default';
   };
 
-  // Função para obter ícone do status
-  const getStatusIcon = (order) => {
-    if (order.is_delayed) return <AlertTriangle size={16} />;
-    if (order.is_today) return <Clock size={16} />;
-    if (order.status === 'FINALIZADO') return <CheckCircle size={16} />;
-    return null;
+  // Função para determinar classe do atraso
+  const getDelayClass = (atraso) => {
+    if (!atraso || atraso === 0) return 'delay--none';
+    if (atraso <= 2) return 'delay--low';
+    if (atraso <= 5) return 'delay--medium';
+    return 'delay--high';
   };
 
-  // Função para obter texto do status de entrega
-  const getDeliveryStatus = (order) => {
-    if (order.status === 'FINALIZADO') return 'FINALIZADO';
-    if (order.status === 'PARCIAL') return 'PARCIAL';
-    return 'PENDENTE';
-  };
+  // Extrair dados do pedido com fallbacks
+  const {
+    id,
+    numero_pc = '',
+    data_emissao = '',
+    fornecedor = {},
+    quantidade_itens = 0,
+    followup_date = '',
+    armazenamento = '',
+    atraso = 0,
+    status = 'PENDENTE'
+  } = order || {};
+
+  const fornecedorCode = fornecedor.code || '';
+  const fornecedorName = fornecedor.name || fornecedor.razao_social || '';
 
   return (
-    <motion.tr
-      className={`order-row order-row--${getStatusClass(order)}`}
-      initial={{ opacity: 0, x: -20 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ delay: index * 0.05, duration: 0.3 }}
-    >
-      {/* Número do Pedido */}
-      <td className="order-row__cell order-row__cell--number">
-        <span className="order-row__number">{order.number}</span>
+    <tr className="order-row">
+      <td className="order-row__number">
+        <span className="number-text">{numero_pc}</span>
       </td>
-
-      {/* Data de Emissão */}
-      <td className="order-row__cell order-row__cell--date">
-        <span className="order-row__date">{formatDate(order.issue_date)}</span>
+      
+      <td className="order-row__date">
+        {formatDate(data_emissao)}
       </td>
-
-      {/* Código do Fornecedor */}
-      <td className="order-row__cell order-row__cell--supplier-code">
-        <span className="order-row__supplier-code">{order.supplier_code}</span>
-      </td>
-
-      {/* Nome do Fornecedor */}
-      <td className="order-row__cell order-row__cell--supplier-name">
-        <span 
-          className="order-row__supplier-name"
-          title={order.supplier_name}
-        >
-          {truncateText(order.supplier_name)}
-        </span>
-      </td>
-
-      {/* Quantidade de Itens */}
-      <td className="order-row__cell order-row__cell--items">
-        <span className="order-row__items">{order.items_count}</span>
-      </td>
-
-      {/* Data de Followup */}
-      <td className="order-row__cell order-row__cell--followup">
-        <div className="order-row__followup">
-          {getStatusIcon(order)}
-          <span>{formatDate(order.followup_date)}</span>
+      
+      <td className="order-row__supplier">
+        <div className="supplier-info">
+          <span className="supplier-code">{fornecedorCode}</span>
+          <span className="supplier-name">{fornecedorName}</span>
         </div>
       </td>
-
-      {/* Armazém */}
-      <td className="order-row__cell order-row__cell--warehouse">
-        <span className="order-row__warehouse">{order.warehouse}</span>
+      
+      <td className="order-row__items">
+        <span className="items-count">{quantidade_itens}</span>
       </td>
-
-      {/* Dias de Atraso */}
-      <td className="order-row__cell order-row__cell--delay">
-        <span className={`order-row__delay ${order.delay_days > 0 ? 'order-row__delay--has-delay' : ''}`}>
-          {order.delay_days > 0 ? `${order.delay_days} dias` : '-'}
+      
+      <td className="order-row__followup">
+        {formatDate(followup_date)}
+      </td>
+      
+      <td className="order-row__warehouse">
+        <span className="warehouse-code">{armazenamento}</span>
+      </td>
+      
+      <td className="order-row__delay">
+        <span className={`delay-badge ${getDelayClass(atraso)}`}>
+          {atraso > 0 ? `${atraso}d` : '-'}
         </span>
       </td>
-
-      {/* Status de Entrega */}
-      <td className="order-row__cell order-row__cell--status">
-        <span className={`order-row__status order-row__status--${order.status.toLowerCase()}`}>
-          {getDeliveryStatus(order)}
+      
+      <td className="order-row__status">
+        <span className={`status-badge ${getStatusClass(status)}`}>
+          {status}
         </span>
       </td>
-    </motion.tr>
+    </tr>
   );
 };
 
 export default OrderRow;
-
