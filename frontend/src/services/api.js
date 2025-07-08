@@ -78,7 +78,8 @@ export const checkHealth = async () => {
   }
 };
 
-export default {
+// Export do objeto para compatibilidade
+export const apiService = {
   fetchStats,
   fetchOrders,
   fetchSuppliers,
@@ -86,3 +87,5 @@ export default {
   checkHealth,
 };
 
+// Export default para compatibilidade
+export default apiService;

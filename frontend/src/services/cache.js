@@ -1,88 +1,58 @@
-// Serviço de cache para funcionalidade offline
-class CacheService {
+// Serviço de cache simplificado
+class SimpleCacheService {
   constructor() {
-    this.CACHE_PREFIX = 'chiaperini_';
+    this.cache = new Map();
     this.CACHE_EXPIRY = 5 * 60 * 1000; // 5 minutos
   }
 
-  // Salvar dados no cache
   set(key, data) {
     try {
-      const cacheData = {
+      this.cache.set(key, {
         data,
         timestamp: Date.now(),
-        expiry: Date.now() + this.CACHE_EXPIRY,
-      };
-      localStorage.setItem(this.CACHE_PREFIX + key, JSON.stringify(cacheData));
+        expiry: Date.now() + this.CACHE_EXPIRY
+      });
     } catch (error) {
-      console.error('Erro ao salvar no cache:', error);
+      console.warn('Erro ao salvar no cache:', error);
     }
   }
 
-  // Recuperar dados do cache
   get(key) {
     try {
-      const cached = localStorage.getItem(this.CACHE_PREFIX + key);
+      const cached = this.cache.get(key);
       if (!cached) return null;
 
-      const cacheData = JSON.parse(cached);
-      
-      // Verificar se o cache expirou
-      if (Date.now() > cacheData.expiry) {
-        this.remove(key);
+      // Verificar se expirou
+      if (Date.now() > cached.expiry) {
+        this.cache.delete(key);
         return null;
       }
 
-      return cacheData.data;
+      return cached.data;
     } catch (error) {
-      console.error('Erro ao recuperar do cache:', error);
+      console.warn('Erro ao recuperar do cache:', error);
       return null;
     }
   }
 
-  // Remover item do cache
   remove(key) {
-    try {
-      localStorage.removeItem(this.CACHE_PREFIX + key);
-    } catch (error) {
-      console.error('Erro ao remover do cache:', error);
-    }
+    this.cache.delete(key);
   }
 
-  // Limpar todo o cache
   clear() {
-    try {
-      const keys = Object.keys(localStorage);
-      keys.forEach(key => {
-        if (key.startsWith(this.CACHE_PREFIX)) {
-          localStorage.removeItem(key);
-        }
-      });
-    } catch (error) {
-      console.error('Erro ao limpar cache:', error);
-    }
+    this.cache.clear();
   }
 
-  // Verificar se existe cache válido
+  getAge(key) {
+    const cached = this.cache.get(key);
+    return cached ? Date.now() - cached.timestamp : null;
+  }
+
   has(key) {
     return this.get(key) !== null;
   }
-
-  // Obter idade do cache em minutos
-  getAge(key) {
-    try {
-      const cached = localStorage.getItem(this.CACHE_PREFIX + key);
-      if (!cached) return null;
-
-      const cacheData = JSON.parse(cached);
-      return Math.floor((Date.now() - cacheData.timestamp) / (1000 * 60));
-    } catch (error) {
-      console.error('Erro ao verificar idade do cache:', error);
-      return null;
-    }
-  }
 }
 
-export const cacheService = new CacheService();
+// Exportar instância única
+export const cacheService = new SimpleCacheService();
 export default cacheService;
-
